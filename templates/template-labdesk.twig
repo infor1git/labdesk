@@ -1,0 +1,1271 @@
+{# LabDesk Main Template - labdesk.html.twig #}
+
+<div class="labdesk-container">
+    <!-- Header with Statistics -->
+    <div class="labdesk-header">
+        <div class="labdesk-title">
+            <h2>🖥️ LabDesk</h2>
+            <p>Gestão de Computadores RustDesk</p>
+        </div>
+        
+        <div class="labdesk-stats">
+            <div class="stat-box">
+                <div class="stat-number" id="totalComputers">{{ computers|length }}</div>
+                <div class="stat-label">Computadores</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="onlineCount">
+                    {% set online_count = computers|filter(c => c.status == 'online')|length %}
+                    {{ online_count }}
+                </div>
+                <div class="stat-label">Online</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="groupsCount">{{ groups|length }}</div>
+                <div class="stat-label">Grupos</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="labdesk-main">
+        <!-- Sidebar Filters -->
+        <aside class="labdesk-sidebar">
+            <!-- Search Box -->
+            <div class="sidebar-section">
+                <input type="text" 
+                       class="search-box" 
+                       id="searchInput" 
+                       placeholder="Buscar computador..."
+                       aria-label="Buscar computador">
+            </div>
+
+            <!-- Status Filters -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">
+                    Status
+                    <button class="btn-clear" title="Limpar filtros">✕</button>
+                </h3>
+                <div class="filter-group">
+                    <div class="filter-item active" data-filter="all">
+                        Todos
+                        <span class="filter-count">{{ computers|length }}</span>
+                    </div>
+                    <div class="filter-item" data-filter="online">
+                        Online
+                        <span class="filter-count" id="count-online">
+                            {% set online = computers|filter(c => c.status == 'online')|length %}
+                            {{ online }}
+                        </span>
+                    </div>
+                    <div class="filter-item" data-filter="offline">
+                        Offline
+                        <span class="filter-count" id="count-offline">
+                            {% set offline = computers|filter(c => c.status != 'online')|length %}
+                            {{ offline }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Units Filters -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">
+                    Unidades
+                    <button class="btn-settings" title="Editar unidades">⚙️</button>
+                </h3>
+                <div class="filter-group" id="unitsFilter">
+                    <div class="filter-item" data-filter="all-units">Todas Unidades</div>
+                    {% for unit in settings.units|default([]) %}
+                        <div class="filter-item" data-filter="{{ unit }}">
+                            {{ unit }}
+                            <span class="filter-count">
+                                {% set count = computers|filter(c => c.unit == unit)|length %}
+                                {{ count }}
+                            </span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Departments Filters -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">
+                    Setores
+                    <button class="btn-settings" title="Editar setores">⚙️</button>
+                </h3>
+                <div class="filter-group" id="departmentsFilter">
+                    <div class="filter-item" data-filter="all-depts">Todos Setores</div>
+                    {% for dept in settings.departments|default([]) %}
+                        <div class="filter-item" data-filter="{{ dept }}">
+                            {{ dept }}
+                            <span class="filter-count">
+                                {% set count = computers|filter(c => c.department == dept)|length %}
+                                {{ count }}
+                            </span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Custom Groups -->
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">
+                    Meus Grupos
+                    <button class="btn-add-group" id="btnNewGroup" title="Novo grupo">+</button>
+                </h3>
+                <div class="filter-group" id="groupsFilter">
+                    {% if groups|length == 0 %}
+                        <div class="filter-item empty-state">
+                            Nenhum grupo criado
+                        </div>
+                    {% else %}
+                        {% for group in groups %}
+                            <div class="filter-item" data-filter="group-{{ group.id }}" data-group="{{ group.name }}">
+                                {{ group.name }}
+                                <span class="filter-count">{{ group.computer_count }}</span>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="labdesk-content">
+            <!-- Toolbar -->
+            <div class="labdesk-toolbar">
+                <div class="toolbar-left">
+                    <button class="btn btn-secondary" id="btnRefresh">🔄 Atualizar</button>
+                    <button class="btn btn-secondary" id="btnSelectAll">☑️ Selecionar Todos</button>
+                    <span class="selected-count" id="selectedCount">0 selecionados</span>
+                </div>
+                <div class="toolbar-right">
+                    <div class="view-toggle">
+                        <button class="view-btn active" data-view="grid" title="Visualizar em Grid">⊞ Grade</button>
+                        <button class="view-btn" data-view="table" title="Visualizar em Tabela">≡ Tabela</button>
+                    </div>
+                    <button class="btn btn-primary" id="btnAddComputer">+ Novo</button>
+                </div>
+            </div>
+
+            <!-- Grid View -->
+            <div id="gridView" class="computers-grid">
+                {% if computers|length == 0 %}
+                    <div class="empty-state">
+                        <div class="empty-icon">🔍</div>
+                        <p>Nenhum computador encontrado</p>
+                    </div>
+                {% else %}
+                    {% for computer in computers %}
+                        <div class="computer-card" data-computer-id="{{ computer.id }}">
+                            <div class="card-header">
+                                <div>
+                                    <h4 class="computer-name">{{ computer.rustdesk_name }}</h4>
+                                    <div class="computer-alias" 
+                                         onclick="editComputer({{ computer.id }})" 
+                                         title="Clique para editar apelido">
+                                        {{ computer.alias|default('Sem apelido - Clique para editar') }}
+                                    </div>
+                                </div>
+                                <button class="card-menu" onclick="openComputerMenu(event, {{ computer.id }})">⋮</button>
+                            </div>
+
+                            <span class="status-badge {% if computer.status == 'online' %}online{% else %}offline{% endif %}">
+                                <span class="status-dot"></span>
+                                {{ computer.status|upper }}
+                            </span>
+
+                            <div class="computer-info">
+                                <div class="info-row">
+                                    <span class="info-label">Unidade:</span>
+                                    <span class="info-value">{{ computer.unit|default('-') }}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Setor:</span>
+                                    <span class="info-value">{{ computer.department|default('-') }}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Último Online:</span>
+                                    <span class="info-value" title="{{ computer.last_online }}">
+                                        {% set last = computer.last_online|date('Y-m-d H:i:s') %}
+                                        Agora
+                                    </span>
+                                </div>
+                            </div>
+
+                            {% if computer.groups|length > 0 %}
+                                <div class="card-groups">
+                                    {% for group in computer.groups %}
+                                        <span class="group-badge">
+                                            {{ group }}
+                                            <button class="remove-group" 
+                                                    onclick="removeComputerFromGroup({{ computer.id }}, '{{ group }}')">
+                                                ×
+                                            </button>
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+
+                            <div class="card-actions">
+                                <button class="btn-action" onclick="editComputer({{ computer.id }})">✎ Editar</button>
+                                <button class="btn-action danger" onclick="deleteComputer({{ computer.id }})">🗑 Deletar</button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <!-- Table View -->
+            <div id="tableView" class="table-view" style="display: none;">
+                <div class="table-wrapper">
+                    <table class="computers-table">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" class="checkbox" id="tableSelectAll"></th>
+                                <th>Status</th>
+                                <th>Nome</th>
+                                <th>Apelido</th>
+                                <th>Unidade</th>
+                                <th>Setor</th>
+                                <th>Grupos</th>
+                                <th>Último Online</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            {% if computers|length == 0 %}
+                                <tr>
+                                    <td colspan="9" style="text-align: center; padding: 40px; color: #7F8C8D;">
+                                        Nenhum computador encontrado
+                                    </td>
+                                </tr>
+                            {% else %}
+                                {% for computer in computers %}
+                                    <tr data-computer-id="{{ computer.id }}">
+                                        <td><input type="checkbox" class="checkbox" data-computer-id="{{ computer.id }}"></td>
+                                        <td>
+                                            <span class="status-badge {% if computer.status == 'online' %}online{% else %}offline{% endif %}">
+                                                <span class="status-dot"></span>
+                                                {{ computer.status|upper }}
+                                            </span>
+                                        </td>
+                                        <td>{{ computer.rustdesk_name }}</td>
+                                        <td>
+                                            <span style="cursor: pointer; color: #2180CD;" onclick="editComputer({{ computer.id }})">
+                                                {{ computer.alias|default('-') }}
+                                            </span>
+                                        </td>
+                                        <td>{{ computer.unit|default('-') }}</td>
+                                        <td>{{ computer.department|default('-') }}</td>
+                                        <td>{{ computer.groups|join(', ')|default('-') }}</td>
+                                        <td>{{ computer.last_online|default('-') }}</td>
+                                        <td>
+                                            <button class="btn-table-action" onclick="editComputer({{ computer.id }})">Editar</button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Modals -->
+<!-- Edit Computer Modal -->
+<div class="modal" id="editComputerModal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal('editComputerModal')">×</button>
+        <h3 class="modal-title">Editar Computador</h3>
+        
+        <form id="editComputerForm" class="labdesk-form">
+            <div class="form-group">
+                <label class="form-label">ID do Computador</label>
+                <input type="text" class="form-input" id="editCompId" readonly>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Nome do Computador</label>
+                <input type="text" class="form-input" id="editCompName" readonly>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Apelido/Descrição</label>
+                <input type="text" class="form-input" id="editCompAlias" 
+                       placeholder="Ex: Computador da Recepção">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Unidade</label>
+                <select class="form-select" id="editCompUnit">
+                    <option>Selecione a unidade</option>
+                    {% for unit in settings.units|default([]) %}
+                        <option value="{{ unit }}">{{ unit }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Setor</label>
+                <select class="form-select" id="editCompDept">
+                    <option>Selecione o setor</option>
+                    {% for dept in settings.departments|default([]) %}
+                        <option value="{{ dept }}">{{ dept }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Adicionar a Grupos</label>
+                <div id="groupsCheckboxes" class="checkboxes-list">
+                    {% for group in groups %}
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="checkbox" value="{{ group.id }}" data-group-name="{{ group.name }}">
+                            <span>{{ group.name }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editComputerModal')">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Salvar Alterações
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- New Group Modal -->
+<div class="modal" id="newGroupModal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal('newGroupModal')">×</button>
+        <h3 class="modal-title">Novo Grupo</h3>
+        
+        <form id="newGroupForm" class="labdesk-form">
+            <div class="form-group">
+                <label class="form-label">Nome do Grupo</label>
+                <input type="text" class="form-input" id="groupName" 
+                       placeholder="Ex: Computadores da TI">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Descrição</label>
+                <textarea class="form-input" id="groupDesc" 
+                          placeholder="Descrição do grupo (opcional)" 
+                          rows="3"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Selecione Computadores</label>
+                <div id="groupComputersCheckboxes" class="checkboxes-list scrollable">
+                    {% for computer in computers %}
+                        <label class="checkbox-label">
+                            <input type="checkbox" class="checkbox" value="{{ computer.id }}">
+                            <span>{{ computer.alias|default(computer.rustdesk_name) }}</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('newGroupModal')">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Criar Grupo
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Styles -->
+<style>
+    .labdesk-container {
+        padding: 20px;
+        background: #f5f7fa;
+        min-height: calc(100vh - 100px);
+    }
+
+    .labdesk-header {
+        background: white;
+        border-bottom: 2px solid #ecf0f1;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .labdesk-title h2 {
+        margin: 0;
+        font-size: 28px;
+        color: #2c3e50;
+    }
+
+    .labdesk-title p {
+        margin: 4px 0 0 0;
+        color: #7f8c8d;
+        font-size: 14px;
+    }
+
+    .labdesk-stats {
+        display: flex;
+        gap: 24px;
+    }
+
+    .stat-box {
+        text-align: center;
+    }
+
+    .stat-number {
+        font-size: 24px;
+        font-weight: 700;
+        color: #2180cd;
+    }
+
+    .stat-label {
+        font-size: 12px;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 4px;
+    }
+
+    .labdesk-main {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 20px;
+    }
+
+    /* Sidebar */
+    .labdesk-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .sidebar-section {
+        background: white;
+        border-radius: 8px;
+        padding: 16px;
+        border: 1px solid #ecf0f1;
+    }
+
+    .sidebar-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0 0 12px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .search-box {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ecf0f1;
+        border-radius: 6px;
+        font-size: 13px;
+        transition: border-color 0.2s;
+    }
+
+    .search-box:focus {
+        outline: none;
+        border-color: #2180cd;
+        box-shadow: 0 0 0 3px rgba(33,128,205,0.1);
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .filter-item {
+        padding: 8px 12px;
+        background: #f5f7fa;
+        border: 1px solid #ecf0f1;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 13px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .filter-item:hover {
+        background: #ebf5ff;
+        border-color: #2180cd;
+    }
+
+    .filter-item.active {
+        background: #ebf5ff;
+        border-color: #2180cd;
+        color: #2180cd;
+        font-weight: 600;
+    }
+
+    .filter-count {
+        font-size: 11px;
+        color: #7f8c8d;
+        background: rgba(33,128,205,0.1);
+        padding: 2px 8px;
+        border-radius: 12px;
+    }
+
+    /* Main Content */
+    .labdesk-content {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .labdesk-toolbar {
+        background: white;
+        border-radius: 8px;
+        padding: 16px;
+        border: 1px solid #ecf0f1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .toolbar-left, .toolbar-right {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .view-toggle {
+        display: flex;
+        gap: 4px;
+        background: #f5f7fa;
+        padding: 4px;
+        border-radius: 6px;
+    }
+
+    .view-btn {
+        padding: 8px 12px;
+        background: none;
+        border: 1px solid transparent;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 12px;
+        transition: all 0.2s;
+        color: #7f8c8d;
+    }
+
+    .view-btn.active {
+        background: white;
+        color: #2180cd;
+        border-color: #ecf0f1;
+    }
+
+    .btn {
+        padding: 10px 16px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-primary {
+        background: #2180cd;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1b6aa8;
+    }
+
+    .btn-secondary {
+        background: #f5f7fa;
+        color: #2c3e50;
+        border: 1px solid #ecf0f1;
+    }
+
+    .btn-secondary:hover {
+        background: #eceff7;
+    }
+
+    /* Computers Grid */
+    .computers-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+    }
+
+    .computer-card {
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #ecf0f1;
+        padding: 16px;
+        transition: all 0.3s;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .computer-card:hover {
+        box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+        border-color: #2180cd;
+        transform: translateY(-2px);
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 12px;
+    }
+
+    .computer-name {
+        font-size: 16px;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0 0 8px 0;
+        word-break: break-word;
+    }
+
+    .computer-alias {
+        font-size: 12px;
+        color: #7f8c8d;
+        padding: 4px 8px;
+        background: #f5f7fa;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .computer-alias:hover {
+        background: #ebf5ff;
+        color: #2180cd;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-badge.online {
+        background: rgba(46,204,113,0.1);
+        color: #2ecc71;
+    }
+
+    .status-badge.offline {
+        background: rgba(149,165,166,0.1);
+        color: #95a5a6;
+    }
+
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .status-badge.online .status-dot {
+        background: #2ecc71;
+    }
+
+    .status-badge.offline .status-dot {
+        background: #95a5a6;
+    }
+
+    .computer-info {
+        font-size: 12px;
+        color: #7f8c8d;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px 0;
+        border-top: 1px solid #ecf0f1;
+        border-bottom: 1px solid #ecf0f1;
+        margin: 12px 0;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .info-label {
+        color: #7f8c8d;
+    }
+
+    .info-value {
+        color: #2c3e50;
+        font-weight: 500;
+    }
+
+    .card-groups {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 12px;
+    }
+
+    .group-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        background: rgba(33,128,205,0.1);
+        color: #2180cd;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .remove-group {
+        background: none;
+        border: none;
+        color: #2180cd;
+        cursor: pointer;
+        font-size: 12px;
+        padding: 0;
+        margin-left: 4px;
+    }
+
+    .remove-group:hover {
+        color: #e74c3c;
+    }
+
+    .card-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .btn-action {
+        flex: 1;
+        padding: 8px 12px;
+        background: #f5f7fa;
+        border: 1px solid #ecf0f1;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 11px;
+        transition: all 0.2s;
+        color: #7f8c8d;
+    }
+
+    .btn-action:hover {
+        background: #ebf5ff;
+        color: #2180cd;
+        border-color: #2180cd;
+    }
+
+    .btn-action.danger:hover {
+        background: rgba(231,76,60,0.1);
+        color: #e74c3c;
+        border-color: #e74c3c;
+    }
+
+    /* Table View */
+    .computers-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .computers-table thead {
+        background: #f5f7fa;
+        border-bottom: 2px solid #ecf0f1;
+    }
+
+    .computers-table th {
+        padding: 12px 16px;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 700;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .computers-table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid #ecf0f1;
+        font-size: 13px;
+    }
+
+    .computers-table tbody tr:hover {
+        background: #f5f7fa;
+    }
+
+    .computers-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    /* Modal */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal.active {
+        display: flex;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        position: relative;
+    }
+
+    .modal-close {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #7f8c8d;
+    }
+
+    .modal-close:hover {
+        color: #2c3e50;
+    }
+
+    .modal-title {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 16px;
+        color: #2c3e50;
+        margin-top: 0;
+        padding-right: 20px;
+    }
+
+    .labdesk-form {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .form-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .form-input,
+    .form-select {
+        padding: 10px 12px;
+        border: 1px solid #ecf0f1;
+        border-radius: 6px;
+        font-size: 13px;
+        font-family: inherit;
+        transition: border-color 0.2s;
+    }
+
+    .form-input:focus,
+    .form-select:focus {
+        outline: none;
+        border-color: #2180cd;
+        box-shadow: 0 0 0 3px rgba(33,128,205,0.1);
+    }
+
+    .checkboxes-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .checkboxes-list.scrollable {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #ecf0f1;
+        padding: 8px;
+        border-radius: 6px;
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 13px;
+    }
+
+    .checkbox {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+        justify-content: flex-end;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 24px;
+        color: #7f8c8d;
+        grid-column: 1 / -1;
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+    }
+
+    .selected-count {
+        font-size: 13px;
+        color: #7f8c8d;
+    }
+
+    @media (max-width: 1024px) {
+        .labdesk-main {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .labdesk-header {
+            flex-direction: column;
+            gap: 16px;
+            text-align: center;
+        }
+
+        .labdesk-stats {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .computers-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .labdesk-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .toolbar-left,
+        .toolbar-right {
+            width: 100%;
+        }
+    }
+</style>
+
+<!-- JavaScript -->
+<script>
+    // API Configuration
+    const API_URL = '{{ api_url }}';
+    const CSRF_TOKEN = '{{ csrf_token }}';
+
+    // Application State
+    const app = {
+        computers: {{ computers|json_encode|raw }},
+        groups: {{ groups|json_encode|raw }},
+        units: {{ settings.units|default([])|json_encode|raw }},
+        departments: {{ settings.departments|default([])|json_encode|raw }},
+        selectedView: 'grid',
+        activeFilters: {
+            status: 'all',
+            unit: 'all-units',
+            department: 'all-depts',
+            group: null,
+            search: ''
+        },
+        selectedComputers: new Set(),
+        editingComputer: null
+    };
+
+    // Utility Functions
+    function formatLastOnline(dateString) {
+        if (!dateString) return 'Desconhecido';
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = now - date;
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+
+        if (minutes < 1) return 'Agora';
+        if (minutes < 60) return `${minutes}m atrás`;
+        if (hours < 24) return `${hours}h atrás`;
+        return `${days}d atrás`;
+    }
+
+    function openModal(modalId) {
+        document.getElementById(modalId)?.classList.add('active');
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId)?.classList.remove('active');
+    }
+
+    function editComputer(computerId) {
+        const computer = app.computers.find(c => c.id === computerId);
+        if (!computer) return;
+
+        app.editingComputer = computer;
+        
+        document.getElementById('editCompId').value = computer.id;
+        document.getElementById('editCompName').value = computer.rustdesk_name;
+        document.getElementById('editCompAlias').value = computer.alias || '';
+        document.getElementById('editCompUnit').value = computer.unit || '';
+        document.getElementById('editCompDept').value = computer.department || '';
+
+        openModal('editComputerModal');
+    }
+
+    function deleteComputer(computerId) {
+        if (!confirm('Tem certeza que deseja deletar este computador?')) return;
+        
+        app.computers = app.computers.filter(c => c.id !== computerId);
+        app.groups.forEach(group => {
+            group.computers = (group.computers || []).filter(cid => cid !== computerId);
+        });
+        render();
+    }
+
+    async function removeComputerFromGroup(computerId, groupName) {
+        const group = app.groups.find(g => g.name === groupName);
+        if (!group) return;
+
+        try {
+            const response = await fetch(`${API_URL}?action=remove-computer-from-group`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-GLPI-CSRF-Token': CSRF_TOKEN
+                },
+                body: JSON.stringify({
+                    group_id: group.id,
+                    computer_id: computerId
+                })
+            });
+
+            if (response.ok) {
+                const computer = app.computers.find(c => c.id === computerId);
+                if (computer) {
+                    computer.groups = (computer.groups || []).filter(g => g !== groupName);
+                }
+                render();
+            }
+        } catch (error) {
+            console.error('Erro ao remover computador do grupo:', error);
+        }
+    }
+
+    function filterComputers() {
+        return app.computers.filter(comp => {
+            const statusMatch = app.activeFilters.status === 'all' || comp.status === app.activeFilters.status;
+            const unitMatch = app.activeFilters.unit === 'all-units' || comp.unit === app.activeFilters.unit;
+            const deptMatch = app.activeFilters.department === 'all-depts' || comp.department === app.activeFilters.department;
+            const groupMatch = !app.activeFilters.group || (comp.groups || []).includes(app.activeFilters.group);
+            const searchMatch = app.activeFilters.search === '' ||
+                comp.rustdesk_name.toLowerCase().includes(app.activeFilters.search.toLowerCase()) ||
+                (comp.alias || '').toLowerCase().includes(app.activeFilters.search.toLowerCase());
+
+            return statusMatch && unitMatch && deptMatch && groupMatch && searchMatch;
+        });
+    }
+
+    function render() {
+        // Update display based on selected view
+        if (app.selectedView === 'grid') {
+            document.getElementById('gridView').style.display = 'grid';
+            document.getElementById('tableView').style.display = 'none';
+        } else {
+            document.getElementById('gridView').style.display = 'none';
+            document.getElementById('tableView').style.display = 'block';
+        }
+    }
+
+    // Event Listeners Setup
+    document.addEventListener('DOMContentLoaded', function() {
+        // Search input
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            app.activeFilters.search = e.target.value;
+            render();
+        });
+
+        // View toggle
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                app.selectedView = e.target.dataset.view;
+                render();
+            });
+        });
+
+        // Filter items
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('filter-item')) {
+                const filter = e.target.dataset.filter;
+                
+                if (filter.startsWith('group-')) {
+                    const groupId = filter.replace('group-', '');
+                    const group = app.groups.find(g => g.id === parseInt(groupId));
+                    app.activeFilters.group = group ? group.name : null;
+                } else if (filter === 'all') {
+                    app.activeFilters.status = 'all';
+                } else if (filter === 'all-units') {
+                    app.activeFilters.unit = 'all-units';
+                } else if (filter === 'all-depts') {
+                    app.activeFilters.department = 'all-depts';
+                } else if (['online', 'offline'].includes(filter)) {
+                    app.activeFilters.status = filter;
+                } else if (app.units.includes(filter)) {
+                    app.activeFilters.unit = filter;
+                } else if (app.departments.includes(filter)) {
+                    app.activeFilters.department = filter;
+                }
+                
+                render();
+            }
+        });
+
+        // New Group button
+        document.getElementById('btnNewGroup')?.addEventListener('click', () => {
+            openModal('newGroupModal');
+        });
+
+        // Refresh button
+        document.getElementById('btnRefresh')?.addEventListener('click', async () => {
+            const btn = event.target;
+            btn.style.animation = 'spin 1s linear';
+            
+            try {
+                const response = await fetch(`${API_URL}?action=sync-devices`);
+                if (response.ok) {
+                    // Reload data from server
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Erro ao sincronizar:', error);
+            }
+            
+            setTimeout(() => {
+                btn.style.animation = '';
+            }, 1000);
+        });
+    });
+
+    // Form submissions
+    document.getElementById('editComputerForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const data = {
+            id: app.editingComputer.id,
+            alias: document.getElementById('editCompAlias').value,
+            unit: document.getElementById('editCompUnit').value,
+            department: document.getElementById('editCompDept').value
+        };
+
+        try {
+            const response = await fetch(`${API_URL}?action=update-device`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-GLPI-CSRF-Token': CSRF_TOKEN
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                closeModal('editComputerModal');
+                location.reload();
+            }
+        } catch (error) {
+            console.error('Erro ao atualizar computador:', error);
+            alert('Erro ao salvar alterações');
+        }
+    });
+
+    document.getElementById('newGroupForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const selectedComputers = Array.from(document.querySelectorAll('#groupComputersCheckboxes input:checked'))
+            .map(cb => parseInt(cb.value));
+
+        const data = {
+            name: document.getElementById('groupName').value,
+            description: document.getElementById('groupDesc').value,
+            computers: selectedComputers
+        };
+
+        try {
+            const response = await fetch(`${API_URL}?action=create-group`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-GLPI-CSRF-Token': CSRF_TOKEN
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                closeModal('newGroupModal');
+                location.reload();
+            }
+        } catch (error) {
+            console.error('Erro ao criar grupo:', error);
+            alert('Erro ao criar grupo');
+        }
+    });
+
+    // Add spin animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
+</script>
