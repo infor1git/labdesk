@@ -8,6 +8,8 @@ include('../../../inc/includes.php');
 
 Session::checkRight('config', UPDATE);
 
+Html::header(__('Configuração Labdesk', 'labdesk'), $_SERVER['PHP_SELF'], "tools", "PluginLabdeskLabdeskMenu", "config");
+
 $config = PluginLabdeskConfig::getConfig();
 
 // Save configuration
@@ -62,12 +64,6 @@ if (isset($_GET['action']) && $_GET['action'] === 'sync_groups') {
     Html::back();
 }
 
-Html::header(
-    __('Configuração LabDesk', 'labdesk'),
-    $_SERVER['REQUEST_URI'],
-    'config',
-    'plugins'
-);
 ?>
 
 <div class="container" style="max-width: 600px; margin: 20px auto;">

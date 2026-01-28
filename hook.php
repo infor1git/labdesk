@@ -18,22 +18,22 @@ function plugin_labdesk_install()
     if (!$DB->tableExists('glpi_labdesk_computers')) {
         $DB->queryOrDie(
             "CREATE TABLE `glpi_labdesk_computers` (
-                `id` int(11) NOT NULL AUTO_INCREMENT,
-                `rustdesk_id` varchar(50) COLLATE utf8_unicode_ci NOT NULL UNIQUE,
-                `rustdesk_name` varchar(255) COLLATE utf8_unicode_ci NOT NULL,
-                `alias` varchar(255) COLLATE utf8_unicode_ci DEFAULT NULL,
-                `unit` varchar(100) COLLATE utf8_unicode_ci DEFAULT NULL,
-                `department` varchar(100) COLLATE utf8_unicode_ci DEFAULT NULL,
-                `status` enum('online','offline') COLLATE utf8_unicode_ci DEFAULT 'offline',
-                `last_online` datetime DEFAULT NULL,
-                `last_sync` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
-                `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `rustdesk_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL UNIQUE,
+                `rustdesk_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                `alias` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                `unit` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                `department` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+                `status` enum('online','offline') COLLATE utf8mb4_unicode_ci DEFAULT 'offline',
+                `last_online` TIMESTAMP NULL DEFAULT NULL,
+                `last_sync` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (`id`),
                 KEY `status` (`status`),
                 KEY `unit` (`unit`),
                 KEY `department` (`department`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci",
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC",
             "LabDesk: fail to create glpi_labdesk_computers table"
         );
     }
@@ -42,13 +42,13 @@ function plugin_labdesk_install()
     if (!$DB->tableExists('glpi_labdesk_groups')) {
         $DB->queryOrDie(
             "CREATE TABLE `glpi_labdesk_groups` (
-                `id` int(11) NOT NULL AUTO_INCREMENT,
-                `name` varchar(255) COLLATE utf8_unicode_ci NOT NULL UNIQUE,
-                `description` text COLLATE utf8_unicode_ci,
-                `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
-                `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL UNIQUE,
+                `description` text COLLATE utf8mb4_unicode_ci,
+                `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (`id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci",
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC",
             "LabDesk: fail to create glpi_labdesk_groups table"
         );
     }
@@ -57,17 +57,17 @@ function plugin_labdesk_install()
     if (!$DB->tableExists('glpi_labdesk_group_computers')) {
         $DB->queryOrDie(
             "CREATE TABLE `glpi_labdesk_group_computers` (
-                `id` int(11) NOT NULL AUTO_INCREMENT,
-                `group_id` int(11) NOT NULL,
-                `computer_id` int(11) NOT NULL,
-                `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+                `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `group_id` INT UNSIGNED NOT NULL,
+                `computer_id` INT UNSIGNED NOT NULL,
+                `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (`id`),
                 UNIQUE KEY `unique_group_computer` (`group_id`,`computer_id`),
                 KEY `group_id` (`group_id`),
                 KEY `computer_id` (`computer_id`),
-                CONSTRAINT `fk_group_id` FOREIGN KEY (`group_id`) REFERENCES `glpi_labdesk_groups` (`id`) ON DELETE CASCADE,
-                CONSTRAINT `fk_computer_id` FOREIGN KEY (`computer_id`) REFERENCES `glpi_labdesk_computers` (`id`) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci",
+                CONSTRAINT `fk_labdesk_group_id` FOREIGN KEY (`group_id`) REFERENCES `glpi_labdesk_groups` (`id`) ON DELETE CASCADE,
+                CONSTRAINT `fk_labdesk_computer_id` FOREIGN KEY (`computer_id`) REFERENCES `glpi_labdesk_computers` (`id`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC",
             "LabDesk: fail to create glpi_labdesk_group_computers table"
         );
     }
@@ -76,13 +76,13 @@ function plugin_labdesk_install()
     if (!$DB->tableExists('glpi_labdesk_settings')) {
         $DB->queryOrDie(
             "CREATE TABLE `glpi_labdesk_settings` (
-                `id` int(11) NOT NULL AUTO_INCREMENT,
-                `key` varchar(255) COLLATE utf8_unicode_ci NOT NULL UNIQUE,
-                `value` longtext COLLATE utf8_unicode_ci,
-                `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
-                `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `key` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL UNIQUE,
+                `value` longtext COLLATE utf8mb4_unicode_ci,
+                `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 PRIMARY KEY (`id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci",
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC",
             "LabDesk: fail to create glpi_labdesk_settings table"
         );
 
@@ -91,10 +91,8 @@ function plugin_labdesk_install()
             "INSERT INTO `glpi_labdesk_settings` (`key`, `value`) VALUES
             ('rustdesk_url', 'http://seu-servidor:21114'),
             ('rustdesk_token', ''),
-            ('units', '[\"Salvador\", \"São Paulo\", \"Brasília\"]'),
-            ('departments', '[\"TI\", \"Administrativo\", \"Financeiro\", \"RH\", \"Operacional\"]'),
             ('sync_interval', '300'),
-            ('last_sync', '2024-01-01 00:00:00')
+            ('last_sync', '1900-01-01 00:00:00')
             ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)",
             "LabDesk: fail to insert default settings"
         );

@@ -20,7 +20,7 @@ function plugin_version_labdesk()
         'version' => PLUGIN_LABDESK_VERSION,
         'author' => 'Rodrigo Cruz',
         'license' => 'GPL v3+',
-        'homepage' => 'https://github.com/seu-usuario/labdesk',
+        'homepage' => 'https://infor1.com.br',
         'requirements' => [
             'glpi' => [
                 'min' => PLUGIN_LABDESK_MIN_GLPI_VERSION,
@@ -89,7 +89,8 @@ function plugin_init_labdesk()
     // Only if connected
     if (Session::getLoginUserID()) {
         // Menu
-        $PLUGIN_HOOKS['menu_tpl_display']['labdesk'] = true;
+
+         $PLUGIN_HOOKS['menu_toadd']['labdesk'] = ['tools' => 'PluginLabdeskLabdeskMenu'];
 
         // Inclur arquivos das classes
         $plugin_path = __DIR__;
@@ -105,13 +106,19 @@ function plugin_init_labdesk()
         }
         if (file_exists($plugin_path . '/inc/config.class.php')) {
             include_once($plugin_path . '/inc/config.class.php');
+        }        
+        if (file_exists($plugin_path . '/inc/menu.class.php')) {
+            include_once($plugin_path . '/inc/menu.class.php');
         }
 
         // Register classes
-        Plugin::registerClass('PluginLabdeskLabdesk');
+        Plugin::registerClass('PluginLabdeskLabdesk', [
+            'addtabon' => ['Computer']
+        ]);
         Plugin::registerClass('PluginLabdeskComputer');
         Plugin::registerClass('PluginLabdeskGroup');
-        Plugin::registerClass('PluginLabdeskConfig');
+        Plugin::registerClass('PluginLabdeskConfig');        
+        Plugin::registerClass('PluginLabdeskLabdeskMenu');
 
         // Add CSS and JS
         $PLUGIN_HOOKS['add_css']['labdesk'] = [
