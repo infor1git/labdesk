@@ -38,37 +38,22 @@ function plugin_labdesk_install()
         );
     }
 
-    // Create groups table
-    if (!$DB->tableExists('glpi_labdesk_groups')) {
+    // Create computertypes-computers junction table
+    if (!$DB->tableExists('glpi_labdesk_computertypes_computers')) {
         $DB->queryOrDie(
-            "CREATE TABLE `glpi_labdesk_groups` (
+            "CREATE TABLE `glpi_labdesk_computertypes_computers` (
                 `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL UNIQUE,
-                `description` text COLLATE utf8mb4_unicode_ci,
-                `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                PRIMARY KEY (`id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC",
-            "LabDesk: fail to create glpi_labdesk_groups table"
-        );
-    }
-
-    // Create group-computers junction table
-    if (!$DB->tableExists('glpi_labdesk_group_computers')) {
-        $DB->queryOrDie(
-            "CREATE TABLE `glpi_labdesk_group_computers` (
-                `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                `group_id` INT UNSIGNED NOT NULL,
+                `computertypes_id` INT UNSIGNED NOT NULL,
                 `computer_id` INT UNSIGNED NOT NULL,
                 `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (`id`),
-                UNIQUE KEY `unique_group_computer` (`group_id`,`computer_id`),
-                KEY `group_id` (`group_id`),
+                UNIQUE KEY `unique_computertypes_computer` (`computertypes_id`,`computer_id`),
+                KEY `computertypes_id` (`computertypes_id`),
                 KEY `computer_id` (`computer_id`),
-                CONSTRAINT `fk_labdesk_group_id` FOREIGN KEY (`group_id`) REFERENCES `glpi_labdesk_groups` (`id`) ON DELETE CASCADE,
+                CONSTRAINT `fk_labdesk_computertypes_id` FOREIGN KEY (`computertypes_id`) REFERENCES `glpi_computertypes` (`id`) ON DELETE CASCADE,
                 CONSTRAINT `fk_labdesk_computer_id` FOREIGN KEY (`computer_id`) REFERENCES `glpi_labdesk_computers` (`id`) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC",
-            "LabDesk: fail to create glpi_labdesk_group_computers table"
+            "LabDesk: fail to create glpi_labdesk_computertypes_computers table"
         );
     }
 
@@ -111,8 +96,7 @@ function plugin_labdesk_uninstall()
     global $DB;
 
     $tables = [
-        'glpi_labdesk_group_computers',
-        'glpi_labdesk_groups',
+        'glpi_labdesk_computertypes_computers',
         'glpi_labdesk_computers',
         'glpi_labdesk_settings',
     ];
