@@ -1,12 +1,12 @@
-/* Layout Principal - Estilo Moderno Dashboard */
+/* Layout Principal - LabDesk Moderno */
 :root {
-    --ld-primary: #3b82f6; /* Azul moderno */
-    --ld-bg: #f8fafc;      /* Fundo muito claro */
+    --ld-primary: #3b82f6;
+    --ld-bg: #f8fafc;
     --ld-sidebar-bg: #ffffff;
     --ld-border: #e2e8f0;
     --ld-text-main: #1e293b;
     --ld-text-muted: #64748b;
-    --ld-radius: 12px;
+    --ld-radius: 8px;
     --ld-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
@@ -19,9 +19,10 @@
     border-radius: var(--ld-radius);
     overflow: hidden;
     margin-top: 15px;
+    position: relative;
 }
 
-/* --- SIDEBAR (Esquerda) --- */
+/* SIDEBAR */
 .labdesk-sidebar {
     width: 260px;
     background: var(--ld-sidebar-bg);
@@ -31,13 +32,11 @@
     padding: 20px 0;
     flex-shrink: 0;
 }
-
 .labdesk-sidebar-header {
     padding: 0 20px 20px 20px;
     border-bottom: 1px solid var(--ld-border);
     margin-bottom: 10px;
 }
-
 .labdesk-sidebar-title {
     font-size: 1.1rem;
     font-weight: 700;
@@ -46,7 +45,6 @@
     align-items: center;
     gap: 10px;
 }
-
 .labdesk-nav-item {
     padding: 10px 20px;
     cursor: pointer;
@@ -58,19 +56,13 @@
     transition: all 0.2s;
     border-left: 3px solid transparent;
 }
-
-.labdesk-nav-item:hover {
-    background-color: #f1f5f9;
-    color: var(--ld-primary);
-}
-
+.labdesk-nav-item:hover { background-color: #f1f5f9; color: var(--ld-primary); }
 .labdesk-nav-item.active {
     background-color: #eff6ff;
     color: var(--ld-primary);
     border-left-color: var(--ld-primary);
     font-weight: 600;
 }
-
 .labdesk-count-badge {
     background: #e2e8f0;
     color: var(--ld-text-muted);
@@ -78,13 +70,9 @@
     border-radius: 10px;
     font-size: 0.75rem;
 }
+.labdesk-nav-item.active .labdesk-count-badge { background: #dbeafe; color: var(--ld-primary); }
 
-.labdesk-nav-item.active .labdesk-count-badge {
-    background: #dbeafe;
-    color: var(--ld-primary);
-}
-
-/* --- MAIN CONTENT (Direita) --- */
+/* MAIN CONTENT */
 .labdesk-main {
     flex: 1;
     display: flex;
@@ -93,7 +81,6 @@
     background-color: var(--ld-bg);
 }
 
-/* Toolbar Superior */
 .labdesk-toolbar {
     padding: 15px 25px;
     background: #fff;
@@ -101,7 +88,8 @@
     display: flex;
     gap: 15px;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: visible; 
+    z-index: 20; 
 }
 
 .labdesk-search-group {
@@ -109,18 +97,28 @@
     min-width: 200px;
     position: relative;
 }
-
 .labdesk-search-icon {
     position: absolute;
-    left: 14px; /* Ajustado */
+    left: 14px;
     top: 50%;
     transform: translateY(-50%);
     color: #94a3b8;
     pointer-events: none;
+    z-index: 5;
 }
 
-/* CORREÇÃO AQUI: Aumentado o padding-left para 40px */
+/* CORREÇÃO DO INPUT (!important) */
 .labdesk-input {
+    width: 100%;
+    padding: 10px 10px 10px 10px !important; 
+    border: 1px solid var(--ld-border) !important;
+    border-radius: 8px !important;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.labdesk-input:focus { border-color: var(--ld-primary) !important; }
+
+.labdesk-search {
     width: 100%;
     padding: 10px 10px 10px 42px !important; 
     border: 1px solid var(--ld-border) !important;
@@ -128,28 +126,87 @@
     outline: none;
     transition: border-color 0.2s;
 }
+.labdesk-search:focus { border-color: var(--ld-primary) !important; }
 
-.labdesk-input:focus {
-    border-color: var(--ld-primary);
+/* --- CUSTOM SELECT (COM BUSCA) --- */
+.ld-cs-wrapper {
+    position: relative;
+    min-width: 220px;
+    font-size: 0.9rem;
 }
-
-.labdesk-select {
-    padding: 10px 15px !important;
-    border: 1px solid var(--ld-border) !important;
-    border-radius: 8px !important;
+.ld-cs-btn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 10px 15px;
     background: #fff;
-    color: var(--ld-text-main) !important;
-    outline: none;
+    border: 1px solid var(--ld-border);
+    border-radius: 8px;
     cursor: pointer;
+    color: var(--ld-text-main);
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
 }
+.ld-cs-btn:after {
+    content: '\25BC';
+    font-size: 0.7em;
+    color: #94a3b8;
+    margin-left: 10px;
+}
+.ld-cs-dropdown {
+    position: absolute;
+    top: 105%;
+    left: 0;
+    width: 100%;
+    min-width: 250px;
+    background: #fff;
+    border: 1px solid var(--ld-border);
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    display: none;
+    z-index: 100;
+    flex-direction: column;
+    padding: 8px;
+}
+.ld-cs-wrapper.open .ld-cs-dropdown { display: flex; }
 
+.ld-cs-search {
+    width: 100%;
+    padding: 8px 8px 8px 8px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 6px !important;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    outline: none;
+}
+.ld-cs-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 250px;
+    overflow-y: auto;
+}
+.ld-cs-item {
+    padding: 8px 10px;
+    cursor: pointer;
+    border-radius: 4px;
+    color: var(--ld-text-main);
+    transition: background 0.1s;
+}
+.ld-cs-item:hover { background: #f1f5f9; }
+.ld-cs-item.selected { background: #eff6ff; color: var(--ld-primary); font-weight: 600; }
+.ld-cs-item.empty-opt { color: #ef4444; font-style: italic; border-bottom: 1px dashed #e2e8f0; margin-bottom: 4px; }
+
+
+/* VIEW BUTTONS */
 .labdesk-btn-group {
     display: flex;
     background: #f1f5f9;
     padding: 4px;
     border-radius: 8px;
 }
-
 .labdesk-view-btn {
     border: none;
     background: transparent;
@@ -159,27 +216,23 @@
     color: var(--ld-text-muted);
     transition: all 0.2s;
 }
-
 .labdesk-view-btn.active {
     background: #fff;
     color: var(--ld-primary);
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
-/* Área de Conteúdo (Scroll) */
+/* CARDS */
 .labdesk-content-scroll {
     flex: 1;
     overflow-y: auto;
     padding: 25px;
 }
-
-/* --- GRID VIEW --- */
 .labdesk-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
 }
-
 .labdesk-card {
     background: #fff;
     border: 1px solid var(--ld-border);
@@ -189,59 +242,16 @@
     display: flex;
     flex-direction: column;
 }
-
-.labdesk-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--ld-shadow);
-    border-color: #cbd5e1;
-}
-
-.labdesk-card-header {
-    padding: 16px;
-    border-bottom: 1px solid #f1f5f9;
-}
-
-.labdesk-card-title {
-    font-weight: 600;
-    font-size: 1rem;
-    color: var(--ld-text-main);
-    margin-bottom: 4px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Link para o GLPI */
-.labdesk-glpi-link {
-    color: var(--ld-text-main);
-    text-decoration: none;
-    transition: color 0.2s;
-}
-.labdesk-glpi-link:hover {
-    color: var(--ld-primary);
-    text-decoration: underline;
-}
-
-.labdesk-card-subtitle {
-    font-size: 0.85rem;
-    color: var(--ld-text-muted);
-}
-
-.labdesk-card-body {
-    padding: 16px;
-    flex: 1;
-}
-
-.labdesk-info-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 0.85rem;
-}
-
+.labdesk-card:hover { transform: translateY(-2px); box-shadow: var(--ld-shadow); border-color: #cbd5e1; }
+.labdesk-card-header { padding: 16px; border-bottom: 1px solid #f1f5f9; }
+.labdesk-card-title { font-weight: 600; font-size: 1rem; color: var(--ld-text-main); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.labdesk-glpi-link { color: var(--ld-text-main); text-decoration: none; transition: color 0.2s; }
+.labdesk-glpi-link:hover { color: var(--ld-primary); text-decoration: underline; }
+.labdesk-card-subtitle { font-size: 0.85rem; color: var(--ld-text-muted); }
+.labdesk-card-body { padding: 16px; flex: 1; }
+.labdesk-info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; }
 .labdesk-info-label { color: #94a3b8; }
-.labdesk-info-value { color: var(--ld-text-main); font-weight: 500; }
-
+.labdesk-info-value { color: var(--ld-text-main); font-weight: 500; text-align: right; }
 .labdesk-card-footer {
     padding: 12px 16px;
     background: #f8fafc;
@@ -250,18 +260,9 @@
     gap: 8px;
     border-radius: 0 0 var(--ld-radius) var(--ld-radius);
 }
-
-/* --- STATUS BADGES --- */
-.labdesk-status-badge {
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
+.labdesk-status-badge { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
 .labdesk-status-online { background: #dcfce7; color: #166534; }
 .labdesk-status-offline { background: #f1f5f9; color: #64748b; }
-
-/* --- BOTÕES --- */
 .labdesk-btn {
     border: none;
     border-radius: 6px;
@@ -276,27 +277,15 @@
     justify-content: center;
     transition: background 0.2s;
 }
-
-.labdesk-btn-sm { padding: 6px 10px; font-size: 0.8rem; }
-
 .labdesk-btn-connect { background: var(--ld-primary); color: #fff; }
 .labdesk-btn-connect:hover { background: #2563eb; }
-
 .labdesk-btn-connect-web { background: #0f172a; color: #fff; }
 .labdesk-btn-connect-web:hover { background: #334155; }
-
 .labdesk-btn-warning { background: #f59e0b; color: #fff; }
 .labdesk-btn-warning:hover { background: #d97706; }
+.labdesk-btn-sm { padding: 6px 10px; font-size: 0.8rem; }
+.labdesk-empty { text-align: center; padding: 60px; color: #94a3b8; grid-column: 1 / -1; }
 
-/* --- EMPTY STATE --- */
-.labdesk-empty {
-    text-align: center;
-    padding: 60px;
-    color: #94a3b8;
-    grid-column: 1 / -1;
-}
-
-/* --- MODAL --- */
 .labdesk-modal-backdrop {
     position: fixed;
     top: 0; left: 0;
@@ -311,9 +300,13 @@
     background: #fff;
     padding: 24px;
     border-radius: 12px;
-    width: 400px;
+    width: 450px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
 }
+.labdesk-modal-content { overflow-y: auto; padding-right: 5px; flex: 1; }
 .labdesk-form-group { margin-bottom: 16px; }
 .labdesk-form-label { display: block; margin-bottom: 6px; font-weight: 500; color: var(--ld-text-main); }
 .labdesk-modal-footer { margin-top: 24px; display: flex; justify-content: flex-end; gap: 10px; }

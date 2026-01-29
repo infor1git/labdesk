@@ -16,10 +16,10 @@ class PluginLabdeskLabdeskMenu extends CommonGLPI {
      */
     static function getMenuContent() {
         $config_image = '<i class="fas fa-gears"
-                                title="' . __('Configuração', 'formcreator') . '"></i>&nbsp; Configuração';
+                                title="' . __('Configuração', 'labdesk') . '"></i>&nbsp; Configuração';
         
         $labdesk_image = '<i class="fas fa-computer"
-                                title="' . __('Labdesk', 'formcreator') . '"></i>&nbsp; Labdesk';
+                                title="' . __('Labdesk', 'labdesk') . '"></i>&nbsp; Equipamentos';
         
         $menu = [
             'title' => self::getMenuName(),
@@ -32,7 +32,7 @@ class PluginLabdeskLabdeskMenu extends CommonGLPI {
         
         if (PluginLabdeskLabdesk::canView()) {
             $menu['options']['labdesk'] = [
-                'title' => __('Labdesk', 'labdesk'),
+                'title' => __('Equipamentos', 'labdesk'),
                 'page'  => Plugin::getWebDir('labdesk') . '/front/labdesk.php',
                 'links' => [
                     $config_image => Plugin::getWebDir('labdesk') . '/front/config.php',

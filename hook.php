@@ -1,26 +1,20 @@
 <?php
 /**
- * LabDesk Plugin - Hook file for GLPI 10.0.16+
- * Handles installation, uninstallation and migration
- * VERSÃO CORRIGIDA - Sem Migration::addLog()
+ * LabDesk Plugin - Hook file
  */
 
-/**
- * Install hook - Creates tables and initial configuration
- *
- * @return boolean
- */
 function plugin_labdesk_install()
 {
     global $DB;
 
-    // Create computers table
+    // 1. Tabela de Computadores
     if (!$DB->tableExists('glpi_labdesk_computers')) {
         $DB->queryOrDie(
             "CREATE TABLE `glpi_labdesk_computers` (
                 `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `rustdesk_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL UNIQUE,
                 `rustdesk_name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                `rustdesk_row_id` INT UNSIGNED NOT NULL DEFAULT 0,
                 `alias` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
                 `unit` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
                 `department` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -38,26 +32,22 @@ function plugin_labdesk_install()
         );
     }
 
-    // Create computertypes-computers junction table
+    // 2. Tabela de Relacionamento de Tipos
     if (!$DB->tableExists('glpi_labdesk_computertypes_computers')) {
         $DB->queryOrDie(
             "CREATE TABLE `glpi_labdesk_computertypes_computers` (
                 `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
-                `computertypes_id` INT UNSIGNED NOT NULL,
                 `computer_id` INT UNSIGNED NOT NULL,
-                `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `computertypes_id` INT UNSIGNED NOT NULL,
                 PRIMARY KEY (`id`),
-                UNIQUE KEY `unique_computertypes_computer` (`computertypes_id`,`computer_id`),
-                KEY `computertypes_id` (`computertypes_id`),
-                KEY `computer_id` (`computer_id`),
-                CONSTRAINT `fk_labdesk_computertypes_id` FOREIGN KEY (`computertypes_id`) REFERENCES `glpi_computertypes` (`id`) ON DELETE CASCADE,
-                CONSTRAINT `fk_labdesk_computer_id` FOREIGN KEY (`computer_id`) REFERENCES `glpi_labdesk_computers` (`id`) ON DELETE CASCADE
+                UNIQUE KEY `uniq_comp_type` (`computer_id`),
+                KEY `computertypes_id` (`computertypes_id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC",
             "LabDesk: fail to create glpi_labdesk_computertypes_computers table"
         );
     }
 
-    // Create settings table
+    // 3. Tabela de Configurações
     if (!$DB->tableExists('glpi_labdesk_settings')) {
         $DB->queryOrDie(
             "CREATE TABLE `glpi_labdesk_settings` (
@@ -71,96 +61,62 @@ function plugin_labdesk_install()
             "LabDesk: fail to create glpi_labdesk_settings table"
         );
 
-        // Insert default settings
         $DB->queryOrDie(
             "INSERT INTO `glpi_labdesk_settings` (`key`, `value`) VALUES
             ('rustdesk_url', 'http://seu-servidor:21114'),
             ('rustdesk_token', ''),
             ('sync_interval', '300'),
-            ('last_sync', '1900-01-01 00:00:00')
+            ('last_sync', '1900-01-01 00:00:00'),
+            ('password_default', ''),
+            ('webclient_url', 'http://seu-servidor:21114'),
+            ('use_password_default', '0')
             ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)",
             "LabDesk: fail to insert default settings"
         );
     }
 
-    return true;
-}
-
-/**
- * Uninstall hook - Removes tables and data
- *
- * @return boolean
- */
-function plugin_labdesk_uninstall()
-{
-    global $DB;
-
-    $tables = [
-        'glpi_labdesk_computertypes_computers',
-        'glpi_labdesk_computers',
-        'glpi_labdesk_settings',
-    ];
-
-    foreach ($tables as $table) {
-        if ($DB->tableExists($table)) {
-            $DB->queryOrDie(
-                "DROP TABLE IF EXISTS `$table`",
-                "LabDesk: fail to drop table $table"
-            );
-        }
+    // 4. Registrar CRON TASK
+    $cron = new CronTask();
+    if (!$cron->getFromDBbyName('PluginLabdeskCron', 'cronSync')) {
+        $cron->add([
+            'itemtype' => 'PluginLabdeskCron',
+            'name'     => 'cronLabdeskSync',
+            'frequency'=> 300,
+            'param'    => 1,
+            'state'    => 1,
+            'mode'     => 1
+        ]);
     }
 
     return true;
 }
 
-/**
- * Pre-installation check for migration version
- * 
- * @return boolean
- */
-function plugin_labdesk_pre_install()
+function plugin_labdesk_uninstall()
 {
+    global $DB;
+    $tables = [
+        'glpi_labdesk_computertypes_computers',
+        'glpi_labdesk_computers',
+        'glpi_labdesk_settings',
+    ];
+    foreach ($tables as $table) {
+        if ($DB->tableExists($table)) {
+            $DB->queryOrDie("DROP TABLE IF EXISTS `$table`", "LabDesk: fail to drop $table");
+        }
+    }
+    
+    // Remove Cron
+    $cron = new CronTask();
+    if ($cron->getFromDBbyName('PluginLabdeskCron', 'cronSync')) {
+        $cron->delete(['id' => $cron->fields['id']]);
+    }
+
     return true;
 }
 
-/**
- * Post-installation hook
- *
- * @return boolean
- */
-function plugin_labdesk_post_install()
-{
-    return true;
-}
-
-/**
- * Pre-uninstallation hook
- *
- * @return boolean
- */
-function plugin_labdesk_pre_uninstall()
-{
-    return true;
-}
-
-/**
- * Post-uninstallation hook
- *
- * @return boolean
- */
-function plugin_labdesk_post_uninstall()
-{
-    return true;
-}
-
-/**
- * Migration upgrade/update hook
- *
- * @param string $version
- * @return boolean
- */
-function plugin_labdesk_upgrade($version)
-{
-    return true;
-}
+function plugin_labdesk_pre_install() { return true; }
+function plugin_labdesk_post_install() { return true; }
+function plugin_labdesk_pre_uninstall() { return true; }
+function plugin_labdesk_post_uninstall() { return true; }
+function plugin_labdesk_upgrade($version) { return true; }
 ?>

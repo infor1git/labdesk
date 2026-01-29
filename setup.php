@@ -4,7 +4,7 @@
  * Setup file with proper GLPI 10.0.16+ structure - VERSÃO MELHORADA
  */
 
-define('PLUGIN_LABDESK_VERSION', '1.0.0');
+define('PLUGIN_LABDESK_VERSION', '1.0.4');
 define('PLUGIN_LABDESK_MIN_GLPI_VERSION', '10.0.16');
 define('PLUGIN_LABDESK_MAX_GLPI_VERSION', '10.0.99');
 
